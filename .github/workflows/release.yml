@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release artifact
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}" ./build.sh --release
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            "KittyTaskbar-${VERSION}.zip" \
+            --title "KittyTaskbar ${VERSION}" \
+            --generate-notes
