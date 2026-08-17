@@ -35,13 +35,7 @@ brew trust muarifer/tap   # required on Homebrew 6+
 brew install --cask kitty-taskbar
 ```
 
-The app is ad-hoc signed (not notarized). If Gatekeeper blocks the first launch, allow it under System Settings → Privacy & Security, or remove the quarantine attribute:
-
-```sh
-xattr -dr com.apple.quarantine /Applications/KittyTaskbar.app
-```
-
-On Homebrew 5 and older you can instead install with `brew install --cask --no-quarantine kitty-taskbar`.
+Releases are signed with a Developer ID certificate and notarized by Apple, so Gatekeeper allows them without any extra steps.
 
 ### Build from source
 
