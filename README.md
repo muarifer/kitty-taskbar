@@ -31,10 +31,17 @@ Restart kitty after changing the config.
 
 ```sh
 brew tap muarifer/tap
-brew install --cask --no-quarantine kitty-taskbar
+brew trust muarifer/tap   # required on Homebrew 6+
+brew install --cask kitty-taskbar
 ```
 
-The app is ad-hoc signed (not notarized). The `--no-quarantine` flag lets it launch without Gatekeeper complaints; if you omit it, allow the app under System Settings → Privacy & Security on first launch.
+The app is ad-hoc signed (not notarized). If Gatekeeper blocks the first launch, allow it under System Settings → Privacy & Security, or remove the quarantine attribute:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/KittyTaskbar.app
+```
+
+On Homebrew 5 and older you can instead install with `brew install --cask --no-quarantine kitty-taskbar`.
 
 ### Build from source
 
