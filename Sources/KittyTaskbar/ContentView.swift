@@ -4,26 +4,53 @@ struct ContentView: View {
     @ObservedObject var model: TaskbarModel
     var close: () -> Void
 
+    private var totalRows: Int {
+        var count = 0
+        for instance in model.instances {
+            for osWindow in instance.osWindows {
+                for tab in osWindow.tabs {
+                    count += 1
+                    if tab.windows.count > 1 { count += tab.windows.count }
+                }
+            }
+        }
+        return count
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if model.instances.isEmpty {
-                Text("Kitty çalışmıyor")
-                    .foregroundStyle(.secondary)
+            switch model.status {
+            case .loading:
+                ProgressView()
+                    .controlSize(.small)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 16)
-            } else {
-                ForEach(model.instances) { instance in
-                    ForEach(Array(instance.osWindows.enumerated()), id: \.element.id) { index, osWindow in
-                        WindowSection(
-                            model: model,
-                            instance: instance,
-                            osWindow: osWindow,
-                            title: sectionTitle(instanceIndex: instanceIndex(of: instance), windowIndex: index),
-                            close: close
-                        )
+            case .kittenMissing:
+                statusText("kitten komutu bulunamadı — kitty kurulu mu?")
+            case .notRunning:
+                statusText("Kitty çalışmıyor")
+            case .connectionFailed:
+                statusText(
+                    "Kitty'ye bağlanılamadı. kitty.conf içinde şunlar ayarlı mı?\n" +
+                    "allow_remote_control yes\nlisten_on unix:/tmp/kitty-{kitty_pid}"
+                )
+            case .ok:
+                if totalRows > 16 {
+                    ScrollView {
+                        sections
                     }
+                    .frame(height: 480)
+                } else {
+                    sections
                 }
                 NewWindowDropZone(model: model)
+            }
+
+            if let error = model.lastError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
             }
 
             Divider()
@@ -42,6 +69,31 @@ struct ContentView: View {
         }
         .padding(10)
         .frame(width: 320)
+    }
+
+    private var sections: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(model.instances) { instance in
+                ForEach(Array(instance.osWindows.enumerated()), id: \.element.id) { index, osWindow in
+                    WindowSection(
+                        model: model,
+                        instance: instance,
+                        osWindow: osWindow,
+                        title: sectionTitle(instanceIndex: instanceIndex(of: instance), windowIndex: index),
+                        close: close
+                    )
+                }
+            }
+        }
+    }
+
+    private func statusText(_ message: String) -> some View {
+        Text(message)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 12)
     }
 
     private func instanceIndex(of instance: KittyInstance) -> Int {
@@ -130,8 +182,9 @@ private struct TabRow: View {
             .contentShape(Rectangle())
             .onHover { hovering = $0 }
             .onTapGesture {
-                model.focusTab(tab, socket: instance.socket)
-                close()
+                Task {
+                    if await model.focusTab(tab, socket: instance.socket) { close() }
+                }
             }
             .draggable(TabRef(socket: instance.socket, tabId: tab.id, osWindowId: osWindow.id)) {
                 Label(displayTitle(tab.title), systemImage: "macwindow")
@@ -179,8 +232,9 @@ private struct SplitRow: View {
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture {
-            model.focusWindow(window, socket: instance.socket)
-            close()
+            Task {
+                if await model.focusWindow(window, socket: instance.socket) { close() }
+            }
         }
     }
 }

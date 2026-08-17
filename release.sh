@@ -22,7 +22,8 @@ sed -i '' \
     -e "s/^  version .*/  version \"${VERSION}\"/" \
     -e "s/^  sha256 .*/  sha256 \"${SHA}\"/" \
     "$CASK"
-git -C "$TAP_DIR" commit -am "kitty-taskbar ${VERSION}"
+# Yalnızca cask dosyasını commit'le — tap reposundaki ilgisiz değişikliklere dokunma
+git -C "$TAP_DIR" commit -m "kitty-taskbar ${VERSION}" -- Casks/kitty-taskbar.rb
 git -C "$TAP_DIR" push
 
 echo "Released v${VERSION} and updated the Homebrew cask."

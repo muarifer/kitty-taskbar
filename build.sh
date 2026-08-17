@@ -64,16 +64,26 @@ if [[ "$MODE" == "--release" ]]; then
     rm -f "$ZIP"
     ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
 
-    # Kimlik ve notarytool profili hazırsa notarize et ve bileti zımbala
+    # Notarize et ve bileti zımbala. Ön koşullar eksikse release ÜRETME —
+    # bilerek imzasız release isteniyorsa ALLOW_UNSIGNED_RELEASE=1 verilmeli.
     PROFILE="${NOTARY_PROFILE:-kitty-taskbar-notary}"
     if [[ -n "$IDENTITY" ]] && xcrun notarytool history --keychain-profile "$PROFILE" >/dev/null 2>&1; then
         echo "Notarizing (this can take a few minutes)..."
-        xcrun notarytool submit "$ZIP" --keychain-profile "$PROFILE" --wait
+        SUBMIT_LOG=$(xcrun notarytool submit "$ZIP" --keychain-profile "$PROFILE" --wait)
+        echo "$SUBMIT_LOG"
+        if ! grep -q "status: Accepted" <<< "$SUBMIT_LOG"; then
+            echo "ERROR: notarization was not accepted." >&2
+            exit 1
+        fi
         xcrun stapler staple "$APP"
         rm -f "$ZIP"
         ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+    elif [[ "${ALLOW_UNSIGNED_RELEASE:-0}" == "1" ]]; then
+        echo "WARNING: producing UNSIGNED release (ALLOW_UNSIGNED_RELEASE=1)."
     else
-        echo "WARNING: skipping notarization (missing Developer ID identity or '$PROFILE' keychain profile)."
+        echo "ERROR: cannot notarize (missing Developer ID identity or '$PROFILE' keychain profile)." >&2
+        echo "Set ALLOW_UNSIGNED_RELEASE=1 to build an unsigned release anyway." >&2
+        exit 1
     fi
 
     echo "Release artifact: $PWD/$ZIP"
