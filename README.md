@@ -48,6 +48,10 @@ open KittyTaskbar.app
 
 To start it automatically at login, add `KittyTaskbar.app` to System Settings → General → Login Items.
 
+Run the test suite with `swift test`.
+
+The UI is in English by default and switches to Turkish when the system language is Turkish.
+
 ## How it works
 
 - Discovers kitty control sockets at `/tmp/kitty-<pid>` (stale sockets from dead processes are filtered out)

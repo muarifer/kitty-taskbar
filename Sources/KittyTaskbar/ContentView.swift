@@ -26,14 +26,11 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 16)
             case .kittenMissing:
-                statusText("kitten komutu bulunamadı — kitty kurulu mu?")
+                statusText(L10n.kittenMissing)
             case .notRunning:
-                statusText("Kitty çalışmıyor")
+                statusText(L10n.kittyNotRunning)
             case .connectionFailed:
-                statusText(
-                    "Kitty'ye bağlanılamadı. kitty.conf içinde şunlar ayarlı mı?\n" +
-                    "allow_remote_control yes\nlisten_on unix:/tmp/kitty-{kitty_pid}"
-                )
+                statusText(L10n.connectionFailed)
             case .ok:
                 if totalRows > 16 {
                     ScrollView {
@@ -56,12 +53,12 @@ struct ContentView: View {
             Divider()
 
             HStack {
-                Button("Kitty'yi Aç") {
+                Button(L10n.openKitty) {
                     Kitty.activateApp()
                     close()
                 }
                 Spacer()
-                Button("Çıkış") { NSApp.terminate(nil) }
+                Button(L10n.quit) { NSApp.terminate(nil) }
             }
             .buttonStyle(.borderless)
             .font(.callout)
@@ -102,8 +99,8 @@ struct ContentView: View {
 
     private func sectionTitle(instanceIndex: Int, windowIndex: Int) -> String {
         model.instances.count > 1
-            ? "Kitty \(instanceIndex + 1) · Pencere \(windowIndex + 1)"
-            : "Pencere \(windowIndex + 1)"
+            ? L10n.instanceWindow(instanceIndex + 1, windowIndex + 1)
+            : L10n.window(windowIndex + 1)
     }
 }
 
@@ -249,7 +246,7 @@ private struct NewWindowDropZone: View {
         HStack(spacing: 6) {
             Image(systemName: "plus.rectangle.on.rectangle")
                 .font(.caption)
-            Text("Yeni pencereye ayırmak için buraya bırak")
+            Text(L10n.dropZone)
                 .font(.caption)
         }
         .foregroundStyle(isTargeted ? Color.accentColor : .secondary)
@@ -270,6 +267,6 @@ private struct NewWindowDropZone: View {
 
 private func displayTitle(_ s: String, max: Int = 50) -> String {
     let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
-    if t.isEmpty { return "(başlıksız)" }
+    if t.isEmpty { return L10n.untitled }
     return t.count > max ? String(t.prefix(max)) + "…" : t
 }

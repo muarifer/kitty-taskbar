@@ -9,12 +9,27 @@ VERSION="${1:?usage: ./release.sh <version>}"
 TAP_DIR="${TAP_DIR:-$HOME/htdocs/homebrew-tap}"
 CASK="$TAP_DIR/Casks/kitty-taskbar.rb"
 
+# ZIP ile tag aynı kaynağı temsil etsin: çalışma ağacı temiz olmalı
+if [[ -n "$(git status --porcelain)" ]]; then
+    echo "ERROR: working tree is dirty; commit or stash before releasing." >&2
+    exit 1
+fi
+
+# Tag varsa HEAD'i göstermeli (yarım kalmış release'in tekrarına izin ver)
+if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+    if [[ "$(git rev-parse "v${VERSION}^{commit}")" != "$(git rev-parse HEAD)" ]]; then
+        echo "ERROR: tag v${VERSION} already exists and does not point to HEAD." >&2
+        exit 1
+    fi
+else
+    git tag "v${VERSION}"
+fi
+
 VERSION="$VERSION" ./build.sh --release
 
 ZIP="KittyTaskbar-${VERSION}.zip"
 SHA=$(shasum -a 256 "$ZIP" | awk '{print $1}')
 
-git tag "v${VERSION}" 2>/dev/null || true
 git push origin "v${VERSION}"
 gh release create "v${VERSION}" "$ZIP" --title "KittyTaskbar ${VERSION}" --generate-notes
 
