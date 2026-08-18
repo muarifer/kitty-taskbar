@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KittyTaskbar — a taskbar for the kitty terminal on macOS</title>
+<meta name="description" content="A tiny macOS menu bar app that lists every kitty terminal window and tab, lets you jump to any of them with one click, and move tabs between windows with drag &amp; drop.">
+<meta property="og:title" content="KittyTaskbar">
+<meta property="og:description" content="A taskbar for the kitty terminal, living in the macOS menu bar.">
+<meta property="og:image" content="https://muarifer.github.io/kitty-taskbar/screenshot.png">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐱</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #141210;
+  --bg-raised: #1d1a16;
+  --bg-inset: #0e0c0a;
+  --line: #2e2922;
+  --line-soft: #241f1a;
+  --text: #ece5da;
+  --text-dim: #a89d8d;
+  --text-faint: #6f6659;
+  --accent: #ffa94d;
+  --accent-soft: rgba(255, 169, 77, 0.12);
+  --green: #9ece6a;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255, 169, 77, 0.07), transparent),
+    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.006) 3px, rgba(255,255,255,0.006) 4px);
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- header ---------- */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 0;
+  gap: 16px;
+}
+.brand {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--text);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand .cat { font-size: 22px; }
+.header-right { display: flex; align-items: center; gap: 14px; }
+.lang-switch {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.lang-switch button {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  padding: 6px 12px;
+  cursor: pointer;
+  font: inherit;
+  transition: color .15s, background .15s;
+}
+.lang-switch button:hover { color: var(--text-dim); }
+.lang-switch button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.gh-link {
+  color: var(--text-dim);
+  display: inline-flex;
+  transition: color .15s;
+}
+.gh-link:hover { color: var(--text); }
+.gh-link svg { width: 22px; height: 22px; }
+
+/* ---------- hero ---------- */
+.hero { padding: 64px 0 40px; text-align: center; }
+.hero-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid rgba(255, 169, 77, 0.25);
+  border-radius: 999px;
+  padding: 4px 14px;
+  margin-bottom: 24px;
+  animation: rise .5s ease both;
+}
+.hero h1 {
+  font-family: var(--mono);
+  font-size: clamp(34px, 6vw, 56px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  animation: rise .5s ease .05s both;
+}
+.hero h1 .accent { color: var(--accent); }
+.hero p.lede {
+  max-width: 620px;
+  margin: 20px auto 0;
+  color: var(--text-dim);
+  font-size: 19px;
+  animation: rise .5s ease .1s both;
+}
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 32px;
+  animation: rise .5s ease .15s both;
+}
+.btn {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 10px;
+  padding: 12px 22px;
+  transition: transform .15s, background .15s, border-color .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: var(--accent);
+  color: #1a1206;
+}
+.btn-primary:hover { background: #ffbb70; }
+.btn-ghost {
+  color: var(--text);
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+}
+.btn-ghost:hover { border-color: var(--text-faint); }
+
+/* ---------- screenshot ---------- */
+.shot {
+  margin: 56px auto 0;
+  max-width: 560px;
+  animation: rise .6s ease .2s both;
+}
+.shot-frame {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px;
+  box-shadow:
+    0 30px 60px -20px rgba(0, 0, 0, 0.7),
+    0 0 80px -30px rgba(255, 169, 77, 0.25);
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 9px;
+}
+.shot-caption {
+  margin-top: 16px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-faint);
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- sections ---------- */
+section { padding: 72px 0 0; }
+.section-tag {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.section-tag::before { content: "// "; color: var(--text-faint); }
+h2 {
+  font-family: var(--mono);
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 600;
+  margin: 10px 0 32px;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- features ---------- */
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+}
+.feature {
+  background: var(--bg-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  padding: 24px;
+  transition: border-color .2s, transform .2s;
+}
+.feature:hover {
+  border-color: rgba(255, 169, 77, 0.35);
+  transform: translateY(-2px);
+}
+.feature .icon {
+  font-family: var(--mono);
+  font-size: 20px;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 14px;
+}
+.feature h3 {
+  font-size: 16.5px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.feature p {
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+/* ---------- terminal / code blocks ---------- */
+.term {
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 18px;
+}
+.term-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-raised);
+}
+.term-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
+.term-bar .term-title {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text-faint);
+  margin-left: 8px;
+}
+.term pre {
+  padding: 18px 20px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 14.5px;
+  line-height: 1.8;
+}
+.term .c { color: var(--text-faint); }
+.term .p { color: var(--accent); user-select: none; }
+.term .k { color: var(--green); }
+.setup-note { margin-top: 14px; color: var(--text-dim); font-size: 15px; }
+.setup-note code {
+  font-family: var(--mono);
+  font-size: 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 1px 7px;
+}
+
+/* ---------- install grid ---------- */
+.install-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 720px) { .install-grid { grid-template-columns: 1fr; } }
+.install-card h3 {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+}
+.install-card .hint {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--text-faint);
+}
+
+/* ---------- footer ---------- */
+footer {
+  margin-top: 96px;
+  border-top: 1px solid var(--line-soft);
+  padding: 32px 0 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  color: var(--text-faint);
+}
+footer a { color: var(--text-dim); text-decoration: none; }
+footer a:hover { color: var(--accent); }
+footer .foot-links { display: flex; gap: 22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <a class="brand" href="#"><span class="cat">🐱</span>KittyTaskbar</a>
+  <div class="header-right">
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button id="lang-en" onclick="setLang('en')">EN</button>
+      <button id="lang-tr" onclick="setLang('tr')">TR</button>
+    </div>
+    <a class="gh-link" href="https://github.com/muarifer/kitty-taskbar" aria-label="GitHub">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+    </a>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <span class="hero-badge" data-i18n="badge">Free &amp; open source · macOS 13+</span>
+    <h1 data-i18n-html="title">A taskbar for <span class="accent">kitty</span>,<br>in your menu bar.</h1>
+    <p class="lede" data-i18n="lede">macOS has no per-window taskbar, and the Dock groups every kitty window under one icon. KittyTaskbar lists all your kitty windows and tabs from the menu bar — one click away.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#install" data-i18n="cta_install">Install with Homebrew</a>
+      <a class="btn btn-ghost" href="https://github.com/muarifer/kitty-taskbar" data-i18n="cta_github">View on GitHub</a>
+    </div>
+    <div class="shot">
+      <div class="shot-frame">
+        <img src="screenshot.png" alt="KittyTaskbar popover listing kitty windows and tabs, with a drop zone to detach a tab into a new window" data-i18n-alt="shot_alt">
+      </div>
+      <div class="shot-caption" data-i18n="shot_caption">The popover: every kitty window and tab, grouped and clickable.</div>
+    </div>
+  </div>
+
+  <section id="features">
+    <span class="section-tag" data-i18n="features_tag">Features</span>
+    <h2 data-i18n="features_title">Small app, does one thing well</h2>
+    <div class="features">
+      <div class="feature">
+        <span class="icon">▤</span>
+        <h3 data-i18n="f1_t">Every window, every tab</h3>
+        <p data-i18n="f1_d">Lists all kitty OS windows and their tabs, grouped per window, refreshed every time the panel opens.</p>
+      </div>
+      <div class="feature">
+        <span class="icon">↵</span>
+        <h3 data-i18n="f2_t">One-click focus</h3>
+        <p data-i18n="f2_d">Click a tab to focus it and bring kitty to the front. The active tab shows a checkmark.</p>
+      </div>
+      <div class="feature">
+        <span class="icon">≡</span>
+        <h3 data-i18n="f3_t">Drag &amp; drop tabs</h3>
+        <p data-i18n="f3_d">Drag a tab by its grip handle onto another window group to move it there.</p>
+      </div>
+      <div class="feature">
+        <span class="icon">⬚</span>
+        <h3 data-i18n="f4_t">Detach into a new window</h3>
+        <p data-i18n="f4_d">Drop a tab onto the dashed area at the bottom to detach it into its own OS window.</p>
+      </div>
+      <div class="feature">
+        <span class="icon">⫞</span>
+        <h3 data-i18n="f5_t">Splits included</h3>
+        <p data-i18n="f5_d">Splits inside a tab are listed as indented rows — and they're clickable too.</p>
+      </div>
+      <div class="feature">
+        <span class="icon">⧉</span>
+        <h3 data-i18n="f6_t">Multiple instances</h3>
+        <p data-i18n="f6_d">Works with several running kitty instances at once. Signed and notarized by Apple.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="setup">
+    <span class="section-tag" data-i18n="setup_tag">Setup</span>
+    <h2 data-i18n="setup_title">Enable kitty remote control</h2>
+    <p class="setup-note" data-i18n-html="setup_note">KittyTaskbar talks to kitty over its remote control socket. Add these two lines to <code>~/.config/kitty/kitty.conf</code> and restart kitty:</p>
+    <div class="term">
+      <div class="term-bar">
+        <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+        <span class="term-title">kitty.conf</span>
+      </div>
+      <pre><span class="k">allow_remote_control</span> yes
+<span class="k">listen_on</span> unix:/tmp/kitty-{kitty_pid}</pre>
+    </div>
+  </section>
+
+  <section id="install">
+    <span class="section-tag" data-i18n="install_tag">Install</span>
+    <h2 data-i18n="install_title">Up and running in a minute</h2>
+    <div class="install-grid">
+      <div class="install-card">
+        <h3>Homebrew</h3>
+        <div class="term">
+          <div class="term-bar">
+            <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+            <span class="term-title">zsh</span>
+          </div>
+          <pre><span class="p">$</span> brew tap muarifer/tap
+<span class="p">$</span> brew trust muarifer/tap
+<span class="p">$</span> brew install --cask kitty-taskbar</pre>
+        </div>
+        <p class="hint" data-i18n="brew_hint">Releases are signed with a Developer ID certificate and notarized by Apple — Gatekeeper allows them without extra steps.</p>
+      </div>
+      <div class="install-card">
+        <h3 data-i18n="source_title">From source</h3>
+        <div class="term">
+          <div class="term-bar">
+            <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+            <span class="term-title">zsh</span>
+          </div>
+          <pre><span class="p">$</span> git clone https://github.com/muarifer/kitty-taskbar.git
+<span class="p">$</span> cd kitty-taskbar
+<span class="p">$</span> ./build.sh
+<span class="p">$</span> open KittyTaskbar.app</pre>
+        </div>
+        <p class="hint" data-i18n="source_hint">To start at login, add KittyTaskbar.app to System Settings → General → Login Items.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span data-i18n-html="footer_left">🐱 KittyTaskbar · <a href="https://github.com/muarifer/kitty-taskbar/blob/main/LICENSE">MIT License</a></span>
+  <span class="foot-links">
+    <a href="https://github.com/muarifer/kitty-taskbar" data-i18n="footer_gh">GitHub</a>
+    <a href="https://github.com/muarifer/kitty-taskbar/releases" data-i18n="footer_releases">Releases</a>
+    <a href="https://sw.kovidgoyal.net/kitty/" data-i18n="footer_kitty">kitty terminal</a>
+  </span>
+</footer>
+
+</div>
+
+<script>
+const i18n = {
+  en: {
+    badge: "Free & open source · macOS 13+",
+    title: 'A taskbar for <span class="accent">kitty</span>,<br>in your menu bar.',
+    lede: "macOS has no per-window taskbar, and the Dock groups every kitty window under one icon. KittyTaskbar lists all your kitty windows and tabs from the menu bar — one click away.",
+    cta_install: "Install with Homebrew",
+    cta_github: "View on GitHub",
+    shot_alt: "KittyTaskbar popover listing kitty windows and tabs, with a drop zone to detach a tab into a new window",
+    shot_caption: "The popover: every kitty window and tab, grouped and clickable.",
+    features_tag: "Features",
+    features_title: "Small app, does one thing well",
+    f1_t: "Every window, every tab",
+    f1_d: "Lists all kitty OS windows and their tabs, grouped per window, refreshed every time the panel opens.",
+    f2_t: "One-click focus",
+    f2_d: "Click a tab to focus it and bring kitty to the front. The active tab shows a checkmark.",
+    f3_t: "Drag & drop tabs",
+    f3_d: "Drag a tab by its grip handle onto another window group to move it there.",
+    f4_t: "Detach into a new window",
+    f4_d: "Drop a tab onto the dashed area at the bottom to detach it into its own OS window.",
+    f5_t: "Splits included",
+    f5_d: "Splits inside a tab are listed as indented rows — and they're clickable too.",
+    f6_t: "Multiple instances",
+    f6_d: "Works with several running kitty instances at once. Signed and notarized by Apple.",
+    setup_tag: "Setup",
+    setup_title: "Enable kitty remote control",
+    setup_note: "KittyTaskbar talks to kitty over its remote control socket. Add these two lines to <code>~/.config/kitty/kitty.conf</code> and restart kitty:",
+    install_tag: "Install",
+    install_title: "Up and running in a minute",
+    brew_hint: "Releases are signed with a Developer ID certificate and notarized by Apple — Gatekeeper allows them without extra steps.",
+    source_title: "From source",
+    source_hint: "To start at login, add KittyTaskbar.app to System Settings → General → Login Items.",
+    footer_left: '🐱 KittyTaskbar · <a href="https://github.com/muarifer/kitty-taskbar/blob/main/LICENSE">MIT License</a>',
+    footer_gh: "GitHub",
+    footer_releases: "Releases",
+    footer_kitty: "kitty terminal",
+    doc_title: "KittyTaskbar — a taskbar for the kitty terminal on macOS",
+    doc_desc: "A tiny macOS menu bar app that lists every kitty terminal window and tab, lets you jump to any of them with one click, and move tabs between windows with drag & drop."
+  },
+  tr: {
+    badge: "Ücretsiz ve açık kaynak · macOS 13+",
+    title: '<span class="accent">kitty</span> için bir taskbar,<br>menü çubuğunuzda.',
+    lede: "macOS'te pencere başına taskbar yok; Dock ise tüm kitty pencerelerini tek ikonda topluyor. KittyTaskbar bütün kitty pencerelerinizi ve sekmelerinizi menü çubuğundan listeler — tek tık uzağınızda.",
+    cta_install: "Homebrew ile kur",
+    cta_github: "GitHub'da görüntüle",
+    shot_alt: "kitty pencerelerini ve sekmelerini listeleyen KittyTaskbar paneli; altta sekmeyi yeni pencereye ayırmak için bırakma alanı",
+    shot_caption: "Panel: tüm kitty pencereleri ve sekmeleri, gruplu ve tıklanabilir.",
+    features_tag: "Özellikler",
+    features_title: "Küçük uygulama, tek işi iyi yapar",
+    f1_t: "Her pencere, her sekme",
+    f1_d: "Tüm kitty pencerelerini ve sekmelerini pencere bazında gruplayarak listeler; panel her açıldığında yenilenir.",
+    f2_t: "Tek tıkla odaklan",
+    f2_d: "Bir sekmeye tıklayın: sekme odaklanır ve kitty öne gelir. Aktif sekme onay işaretiyle gösterilir.",
+    f3_t: "Sürükle-bırak ile taşı",
+    f3_d: "Sekmeyi tutma kolundan sürükleyip başka bir pencere grubuna bırakarak oraya taşıyın.",
+    f4_t: "Yeni pencereye ayır",
+    f4_d: "Sekmeyi alttaki kesikli alana bırakın; sekme ayrılıp kendi başına yeni bir pencerede açılır.",
+    f5_t: "Split'ler de dahil",
+    f5_d: "Sekme içindeki split'ler girintili satırlar olarak listelenir — onlar da tıklanabilir.",
+    f6_t: "Çoklu kitty desteği",
+    f6_d: "Aynı anda çalışan birden fazla kitty ile uyumludur. Apple imzalı ve noterlidir.",
+    setup_tag: "Kurulum öncesi",
+    setup_title: "kitty uzaktan kontrolünü açın",
+    setup_note: "KittyTaskbar, kitty ile uzaktan kontrol soketi üzerinden konuşur. Şu iki satırı <code>~/.config/kitty/kitty.conf</code> dosyasına ekleyip kitty'yi yeniden başlatın:",
+    install_tag: "Kurulum",
+    install_title: "Bir dakikada hazır",
+    brew_hint: "Sürümler Developer ID sertifikasıyla imzalı ve Apple noter onaylıdır — Gatekeeper ek adım istemeden izin verir.",
+    source_title: "Kaynaktan derleme",
+    source_hint: "Oturum açılışında başlatmak için KittyTaskbar.app'i Sistem Ayarları → Genel → Açılışta Aç bölümüne ekleyin.",
+    footer_left: '🐱 KittyTaskbar · <a href="https://github.com/muarifer/kitty-taskbar/blob/main/LICENSE">MIT Lisansı</a>',
+    footer_gh: "GitHub",
+    footer_releases: "Sürümler",
+    footer_kitty: "kitty terminali",
+    doc_title: "KittyTaskbar — macOS'te kitty terminali için taskbar",
+    doc_desc: "kitty terminalinin tüm pencere ve sekmelerini listeleyen, tek tıkla odaklanmanızı ve sekmeleri sürükle-bırak ile taşımanızı sağlayan minik bir macOS menü çubuğu uygulaması."
+  }
+};
+
+function setLang(lang) {
+  const dict = i18n[lang];
+  document.documentElement.lang = lang;
+  document.title = dict.doc_title;
+  document.querySelector('meta[name="description"]').setAttribute('content', dict.doc_desc);
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] !== undefined) el.textContent = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    if (dict[key] !== undefined) el.innerHTML = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-alt]').forEach(el => {
+    const key = el.getAttribute('data-i18n-alt');
+    if (dict[key] !== undefined) el.setAttribute('alt', dict[key]);
+  });
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  document.getElementById('lang-tr').classList.toggle('active', lang === 'tr');
+  try { localStorage.setItem('kittytaskbar-lang', lang); } catch (e) {}
+}
+
+(function () {
+  let lang = 'en';
+  try { lang = localStorage.getItem('kittytaskbar-lang'); } catch (e) {}
+  if (lang !== 'en' && lang !== 'tr') {
+    lang = (navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+  }
+  setLang(lang);
+})();
+</script>
+</body>
+</html>

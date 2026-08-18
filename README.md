@@ -4,6 +4,8 @@ A tiny macOS menu bar app that acts as a taskbar for the [kitty](https://sw.kovi
 
 macOS has no per-window taskbar and the Dock groups all kitty windows under one icon — KittyTaskbar fills that gap from the menu bar (🐱 icon).
 
+**Website:** [muarifer.github.io/kitty-taskbar](https://muarifer.github.io/kitty-taskbar/) (English/Turkish)
+
 <img src="docs/screenshot.png" width="500" alt="KittyTaskbar popover listing kitty windows and tabs, with a drop zone to detach a tab into a new window">
 
 
