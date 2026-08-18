@@ -29,8 +29,10 @@ struct ContentView: View {
                 statusText(L10n.kittenMissing)
             case .notRunning:
                 statusText(L10n.kittyNotRunning)
+            case .remoteControlDisabled:
+                setupHint(L10n.remoteControlDisabled)
             case .connectionFailed:
-                statusText(L10n.connectionFailed)
+                setupHint(L10n.connectionFailed)
             case .ok:
                 if totalRows > 16 {
                     ScrollView {
@@ -82,6 +84,27 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    /// Uzaktan kontrol ayarı eksik/yanlışken gösterilen yönlendirme:
+    /// açıklama, gerekli kitty.conf satırları ve web sitesindeki rehbere bağlantı.
+    private func setupHint(_ message: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Text(Kitty.configSnippet)
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+            Link(destination: Kitty.setupGuideURL) {
+                Label(L10n.setupGuide, systemImage: "arrow.up.right.square")
+                    .font(.callout)
+            }
+        }
+        .padding(.vertical, 6)
     }
 
     private func statusText(_ message: String) -> some View {

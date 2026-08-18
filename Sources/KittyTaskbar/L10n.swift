@@ -13,9 +13,14 @@ enum L10n {
     static var kittyNotRunning: String { t("kitty is not running", "Kitty çalışmıyor") }
     static var kittenMissing: String { t("kitten command not found — is kitty installed?", "kitten komutu bulunamadı — kitty kurulu mu?") }
     static var connectionFailed: String {
-        t("Could not connect to kitty. Is this set in kitty.conf?\nallow_remote_control yes\nlisten_on unix:/tmp/kitty-{kitty_pid}",
-          "Kitty'ye bağlanılamadı. kitty.conf içinde şunlar ayarlı mı?\nallow_remote_control yes\nlisten_on unix:/tmp/kitty-{kitty_pid}")
+        t("Could not connect to kitty. Check these lines in kitty.conf and restart kitty:",
+          "Kitty'ye bağlanılamadı. kitty.conf içindeki şu satırları kontrol edip kitty'yi yeniden başlatın:")
     }
+    static var remoteControlDisabled: String {
+        t("kitty is running, but remote control is off. Add these lines to kitty.conf and restart kitty:",
+          "Kitty çalışıyor ama uzaktan kontrol kapalı. Şu satırları kitty.conf dosyasına ekleyip kitty'yi yeniden başlatın:")
+    }
+    static var setupGuide: String { t("Setup guide", "Kurulum rehberi") }
     static var openKitty: String { t("Open kitty", "Kitty'yi Aç") }
     static var quit: String { t("Quit", "Çıkış") }
     static var dropZone: String { t("Drop here to detach into a new window", "Yeni pencereye ayırmak için buraya bırak") }

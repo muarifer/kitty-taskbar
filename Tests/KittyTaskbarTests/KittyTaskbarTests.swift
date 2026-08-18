@@ -131,6 +131,13 @@ final class TaskbarModelTests: XCTestCase {
         XCTAssertTrue(model.instances.isEmpty)
     }
 
+    func testRefreshRemoteControlDisabled() async {
+        let model = makeModel(snapshot: Kitty.Snapshot(instances: [], status: .remoteControlDisabled))
+        await model.refreshNow()
+        XCTAssertEqual(model.status, .remoteControlDisabled)
+        XCTAssertTrue(model.instances.isEmpty)
+    }
+
     func testFocusTabSuccessActivatesAndClearsError() async {
         let instance = sampleInstance()
         let activated = expectation(description: "activated")

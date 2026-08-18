@@ -53,6 +53,7 @@ enum KittyStatus: Equatable, Sendable {
     case ok
     case kittenMissing
     case notRunning
+    case remoteControlDisabled
     case connectionFailed
 }
 
@@ -76,6 +77,13 @@ enum KittyRunError: Error, Sendable, CustomStringConvertible {
 
 enum Kitty {
     static let bundleID = "net.kovidgoyal.kitty"
+    static let setupGuideURL = URL(string: "https://muarifer.github.io/kitty-taskbar/#setup")!
+    static let configSnippet = "allow_remote_control yes\nlisten_on unix:/tmp/kitty-{kitty_pid}"
+
+    /// kitty uygulaması çalışıyor mu? Soket olmasa da (uzaktan kontrol kapalıyken) doğru sonuç verir.
+    static func isAppRunning() -> Bool {
+        !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty
+    }
 
     /// Bilinen konumlar + PATH üzerinden kitten ikilisini bulur.
     static let kittenPath: String? = {
@@ -171,7 +179,10 @@ enum Kitty {
     static func snapshot() -> Snapshot {
         guard kittenPath != nil else { return Snapshot(instances: [], status: .kittenMissing) }
         let socks = sockets()
-        guard !socks.isEmpty else { return Snapshot(instances: [], status: .notRunning) }
+        guard !socks.isEmpty else {
+            // kitty açık ama kontrol soketi yoksa uzaktan kontrol yapılandırılmamış demektir
+            return Snapshot(instances: [], status: isAppRunning() ? .remoteControlDisabled : .notRunning)
+        }
 
         var instances: [KittyInstance] = []
         var anyFailure = false
