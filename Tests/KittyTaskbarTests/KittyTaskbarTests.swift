@@ -221,3 +221,37 @@ final class TaskbarModelTests: XCTestCase {
         await fulfillment(of: [ran], timeout: 2)
     }
 }
+
+// MARK: - Popover konum düzeltmesi (issue #1)
+
+final class PopoverLayoutTests: XCTestCase {
+    private let menuBarBottom: CGFloat = 1416
+
+    func testCorrectPositionNeedsNoAdjustment() {
+        // Sağlıklı davranış: pencerenin üstü menü çubuğunun 1pt içinde.
+        let frame = CGRect(x: 1281, y: 1191, width: 346, height: 226)
+        XCTAssertNil(PopoverLayout.correctedOriginY(popoverFrame: frame, menuBarBottom: menuBarBottom))
+    }
+
+    func testSmallOffsetIsIgnored() {
+        // Ok/gölge ölçüsü farkından gelen küçük sapmalar düzeltilmez.
+        let frame = CGRect(x: 1281, y: 1186, width: 346, height: 226)
+        XCTAssertNil(PopoverLayout.correctedOriginY(popoverFrame: frame, menuBarBottom: menuBarBottom))
+    }
+
+    func testLargeGapIsPulledUnderMenuBar() {
+        // issue #1: popover 120pt aşağıda açılıyor.
+        let frame = CGRect(x: 1281, y: 1071, width: 346, height: 226)
+        let originY = try? XCTUnwrap(
+            PopoverLayout.correctedOriginY(popoverFrame: frame, menuBarBottom: menuBarBottom)
+        )
+        XCTAssertEqual(originY, 1191)
+        XCTAssertEqual((originY ?? 0) + frame.height, menuBarBottom + PopoverLayout.menuBarOverlap)
+    }
+
+    func testPopoverAboveMenuBarIsNotPushedDown() {
+        // Düzeltme yalnızca aşağı kaymayı toparlar; yukarıdaki popover'a dokunmaz.
+        let frame = CGRect(x: 1281, y: 1300, width: 346, height: 226)
+        XCTAssertNil(PopoverLayout.correctedOriginY(popoverFrame: frame, menuBarBottom: menuBarBottom))
+    }
+}

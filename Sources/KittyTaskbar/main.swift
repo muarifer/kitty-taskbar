@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         popover.behavior = .transient
         popover.animates = false
+        observePopoverResize()
         popover.contentViewController = NSHostingController(
             rootView: ContentView(model: model, close: { [weak self] in
                 self?.popover.performClose(nil)
@@ -43,6 +44,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model.refresh()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
+            alignPopoverUnderMenuBar()
+        }
+    }
+
+    /// macOS 26'da popover bazen simgenin epey altında açılıyor (issue #1). Konumu
+    /// ölçüp yalnızca gözle görülür bir sapma varsa pencereyi menü çubuğunun altına çekiyoruz.
+    private func alignPopoverUnderMenuBar() {
+        guard popover.isShown,
+              let menuBarBottom = statusItem.button?.window?.frame.minY,
+              let window = popover.contentViewController?.view.window,
+              let originY = PopoverLayout.correctedOriginY(
+                  popoverFrame: window.frame,
+                  menuBarBottom: menuBarBottom
+              )
+        else { return }
+        var frame = window.frame
+        frame.origin.y = originY
+        window.setFrame(frame, display: true)
+    }
+
+    /// İçerik (kitty listesi) geldiğinde popover yeniden boyutlanıp konumlanıyor;
+    /// düzeltmeyi her boyut değişiminden sonra tekrar uyguluyoruz.
+    private func observePopoverResize() {
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didResizeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            MainActor.assumeIsolated {
+                guard let self,
+                      let window = note.object as? NSWindow,
+                      window === self.popover.contentViewController?.view.window
+                else { return }
+                self.alignPopoverUnderMenuBar()
+            }
         }
     }
 
